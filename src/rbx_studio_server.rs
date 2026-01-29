@@ -88,7 +88,7 @@ impl ServerHandler for RBXStudioServer {
                 website_url: None,
             },
             instructions: Some(
-                "Use run_code to execute Lua code, list_tree to explore the instance hierarchy, read_script to view script contents, and write_script to modify scripts in Roblox Studio."
+                "Use run_code to execute Lua code, list_tree to explore hierarchy, read_script/write_script for scripts, search_scripts to find code patterns, list_scripts for script overview, and get_properties/set_properties for instance modifications."
                     .to_string(),
             ),
         }
@@ -129,12 +129,52 @@ struct WriteScript {
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
+struct SearchScripts {
+    #[schemars(description = "Pattern to search for (text or regex)")]
+    pattern: String,
+    #[schemars(description = "Starting path to search within (e.g., 'game.ServerScriptService'). Defaults to entire game if not provided.")]
+    path: Option<String>,
+    #[schemars(description = "Whether the search should be case sensitive. Defaults to false.")]
+    case_sensitive: Option<bool>,
+    #[schemars(description = "Whether to use regex pattern matching. Defaults to false (plain text search).")]
+    use_regex: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
+struct ListScripts {
+    #[schemars(description = "Starting path to search within (e.g., 'game.ServerScriptService'). Defaults to entire game if not provided.")]
+    path: Option<String>,
+    #[schemars(description = "Filter by script type: 'Script', 'LocalScript', or 'ModuleScript'. Shows all types if not provided.")]
+    script_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
+struct GetProperties {
+    #[schemars(description = "Path to the instance (e.g., 'game.Workspace.Part')")]
+    path: String,
+    #[schemars(description = "Optional list of specific properties to read. If not provided, returns common properties.")]
+    properties: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
+struct SetProperties {
+    #[schemars(description = "Path to the instance (e.g., 'game.Workspace.Part')")]
+    path: String,
+    #[schemars(description = "Properties to set as key-value pairs (e.g., {\"Transparency\": 0.5, \"Name\": \"NewName\"})")]
+    properties: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
 enum ToolArgumentValues {
     RunCode(RunCode),
     InsertModel(InsertModel),
     ListTree(ListTree),
     ReadScript(ReadScript),
     WriteScript(WriteScript),
+    SearchScripts(SearchScripts),
+    ListScripts(ListScripts),
+    GetProperties(GetProperties),
+    SetProperties(SetProperties),
 }
 #[tool_router]
 impl RBXStudioServer {
@@ -197,6 +237,50 @@ impl RBXStudioServer {
         Parameters(args): Parameters<WriteScript>,
     ) -> Result<CallToolResult, ErrorData> {
         self.generic_tool_run(ToolArgumentValues::WriteScript(args))
+            .await
+    }
+
+    #[tool(
+        description = "Searches for a pattern across all scripts in the game. Returns matches with script paths, line numbers, and context lines. Similar to Cmd+Shift+F in Roblox Studio or grep."
+    )]
+    async fn search_scripts(
+        &self,
+        Parameters(args): Parameters<SearchScripts>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.generic_tool_run(ToolArgumentValues::SearchScripts(args))
+            .await
+    }
+
+    #[tool(
+        description = "Returns a flat list of all scripts in the game with their paths and metadata. Useful for getting an overview of all scripts."
+    )]
+    async fn list_scripts(
+        &self,
+        Parameters(args): Parameters<ListScripts>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.generic_tool_run(ToolArgumentValues::ListScripts(args))
+            .await
+    }
+
+    #[tool(
+        description = "Reads property values from an instance. Returns properties like Name, Position, Size, Transparency, etc."
+    )]
+    async fn get_properties(
+        &self,
+        Parameters(args): Parameters<GetProperties>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.generic_tool_run(ToolArgumentValues::GetProperties(args))
+            .await
+    }
+
+    #[tool(
+        description = "Sets property values on an instance. Provide properties as key-value pairs. Useful for quick modifications without writing Lua code."
+    )]
+    async fn set_properties(
+        &self,
+        Parameters(args): Parameters<SetProperties>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.generic_tool_run(ToolArgumentValues::SetProperties(args))
             .await
     }
 
