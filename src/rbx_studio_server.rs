@@ -88,7 +88,7 @@ impl ServerHandler for RBXStudioServer {
                 website_url: None,
             },
             instructions: Some(
-                "User run_command to query data from Roblox Studio place or to change it"
+                "Use run_code to execute Lua code, list_tree to explore the instance hierarchy, read_script to view script contents, and write_script to modify scripts in Roblox Studio."
                     .to_string(),
             ),
         }
@@ -107,9 +107,34 @@ struct InsertModel {
 }
 
 #[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
+struct ListTree {
+    #[schemars(description = "Starting path in the DataModel (e.g., 'game.Workspace', 'game.ServerScriptService'). Defaults to 'game' if not provided.")]
+    path: Option<String>,
+    #[schemars(description = "Maximum depth to traverse. Defaults to 3 if not provided.")]
+    depth: Option<u32>,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
+struct ReadScript {
+    #[schemars(description = "Path to the script instance (e.g., 'game.ServerScriptService.MyScript')")]
+    path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
+struct WriteScript {
+    #[schemars(description = "Path to the script instance (e.g., 'game.ServerScriptService.MyScript')")]
+    path: String,
+    #[schemars(description = "New source code for the script")]
+    source: String,
+}
+
+#[derive(Debug, Deserialize, Serialize, schemars::JsonSchema, Clone)]
 enum ToolArgumentValues {
     RunCode(RunCode),
     InsertModel(InsertModel),
+    ListTree(ListTree),
+    ReadScript(ReadScript),
+    WriteScript(WriteScript),
 }
 #[tool_router]
 impl RBXStudioServer {
@@ -139,6 +164,39 @@ impl RBXStudioServer {
         Parameters(args): Parameters<InsertModel>,
     ) -> Result<CallToolResult, ErrorData> {
         self.generic_tool_run(ToolArgumentValues::InsertModel(args))
+            .await
+    }
+
+    #[tool(
+        description = "Lists the Roblox instance hierarchy starting from a given path. Returns a tree structure with instance names, class types, and children."
+    )]
+    async fn list_tree(
+        &self,
+        Parameters(args): Parameters<ListTree>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.generic_tool_run(ToolArgumentValues::ListTree(args))
+            .await
+    }
+
+    #[tool(
+        description = "Reads the source code of a script instance at the specified path. Works with Script, LocalScript, and ModuleScript."
+    )]
+    async fn read_script(
+        &self,
+        Parameters(args): Parameters<ReadScript>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.generic_tool_run(ToolArgumentValues::ReadScript(args))
+            .await
+    }
+
+    #[tool(
+        description = "Writes source code to a script instance at the specified path. Works with Script, LocalScript, and ModuleScript. Creates the script if it doesn't exist."
+    )]
+    async fn write_script(
+        &self,
+        Parameters(args): Parameters<WriteScript>,
+    ) -> Result<CallToolResult, ErrorData> {
+        self.generic_tool_run(ToolArgumentValues::WriteScript(args))
             .await
     }
 

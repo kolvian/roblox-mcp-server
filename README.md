@@ -93,7 +93,7 @@ To make sure everything is set up correctly, follow these steps:
    which you can also verify in the console output.
 1. Verify that Claude Desktop is correctly configured by clicking on the hammer icon for MCP tools
    beneath the text field where you enter prompts. This should open a window with the list of
-   available Roblox Studio tools (`insert_model` and `run_code`).
+   available Roblox Studio tools (`run_code`, `insert_model`, `list_tree`, `read_script`, and `write_script`).
 
 **Note**: You can fix common issues with setup by restarting Studio and Claude Desktop. Claude
 sometimes is hidden in the system tray, so ensure you've exited it completely.
@@ -104,3 +104,58 @@ sometimes is hidden in the system tray, so ensure you've exited it completely.
 1. Type a prompt in Claude Desktop and accept any permissions to communicate with Studio.
 1. Verify that the intended action is performed in Studio by checking the console, inspecting the
    data model in Explorer, or visually confirming the desired changes occurred in your place.
+
+## Available Tools
+
+This MCP server provides the following tools for interacting with Roblox Studio:
+
+### `run_code`
+Executes Lua code within Roblox Studio and returns the output.
+- **Parameters:**
+  - `command` (string): Lua code to execute
+- **Returns:** Printed output, warnings, errors, and return values
+- **Use cases:** Query data, make changes, inspect objects, test code snippets
+
+### `insert_model`
+Searches the Roblox marketplace and inserts free models into the workspace.
+- **Parameters:**
+  - `query` (string): Search term for the model
+- **Returns:** Name of the inserted model
+- **Use cases:** Quickly add assets from the Roblox library
+
+### `list_tree`
+Lists the Roblox instance hierarchy starting from a given path.
+- **Parameters:**
+  - `path` (string, optional): Starting path (e.g., `"game.Workspace"`, `"game.ServerScriptService"`). Defaults to `"game"`.
+  - `depth` (number, optional): Maximum depth to traverse. Defaults to `3`.
+- **Returns:** JSON tree structure with instance names, class types, and children
+- **Use cases:** Explore the DataModel, understand project structure, find instances
+
+### `read_script`
+Reads the source code of a script instance.
+- **Parameters:**
+  - `path` (string): Path to the script (e.g., `"game.ServerScriptService.MyScript"`)
+- **Returns:** Script source code
+- **Use cases:** View script contents, analyze existing code, review implementations
+- **Supported types:** Script, LocalScript, ModuleScript
+
+### `write_script`
+Writes or modifies script source code.
+- **Parameters:**
+  - `path` (string): Path to the script (e.g., `"game.ServerScriptService.MyScript"`)
+  - `source` (string): New source code for the script
+- **Returns:** Success message
+- **Use cases:** Create new scripts, update existing code, refactor implementations
+- **Supported types:** Script, LocalScript, ModuleScript
+- **Note:** Creates a new ModuleScript if the path doesn't exist
+
+## Example Prompts
+
+Here are some example prompts you can try with Claude:
+
+- "Show me the structure of my workspace" (uses `list_tree`)
+- "Read the MainScript in ServerScriptService" (uses `read_script`)
+- "Create a new script that prints 'Hello World' every 5 seconds" (uses `write_script`)
+- "Add a SpawnLocation to the workspace" (uses `insert_model` or `run_code`)
+- "List all the scripts in ServerScriptService" (uses `list_tree` with specific path)
+- "Modify the PlayerJoin script to give players 100 coins on spawn" (uses `read_script` + `write_script`)
